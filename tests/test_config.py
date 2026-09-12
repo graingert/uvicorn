@@ -422,11 +422,19 @@ def web_concurrency(request: pytest.FixtureRequest) -> Iterator[int]:
         del os.environ["WEB_CONCURRENCY"]
 
 
-@pytest.fixture(params=["127.0.0.1", "127.0.0.2"])
+@pytest.fixture(params=["::1", "127.0.0.1", "127.0.0.2"])
 def forwarded_allow_ips(request: pytest.FixtureRequest) -> Iterator[str]:
     yield request.param
     if os.getenv("FORWARDED_ALLOW_IPS"):
         del os.environ["FORWARDED_ALLOW_IPS"]
+
+
+def test_forwarded_allow_ips_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("FORWARDED_ALLOW_IPS", raising=False)
+
+    config = Config(app=asgi_app)
+
+    assert config.forwarded_allow_ips == "127.0.0.1,::1"
 
 
 def test_env_file(
