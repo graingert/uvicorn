@@ -152,6 +152,9 @@ class ZttpProtocol(asyncio.Protocol):
     def handle_events(self, event: zttp.Event) -> None:
         while event is not zttp.NEED_DATA:
             if isinstance(event, zttp.Request):
+                # Pipelined HTTP requests and WebSocket upgrades may be processed after the keep-alive timer is armed.
+                self._unset_keepalive_if_required()
+
                 assert isinstance(event.headers, zttp.HeaderBlock)
                 self.headers = event.headers.to_list(lowercase_names=True)
                 path = event.path.decode("ascii")
@@ -187,8 +190,6 @@ class ZttpProtocol(asyncio.Protocol):
                     self.logger.warning(message)
                 else:
                     app = self.app
-
-                self._unset_keepalive_if_required()
 
                 self.cycle = RequestResponseCycle(
                     scope=self.scope,
